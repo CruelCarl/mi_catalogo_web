@@ -84,6 +84,13 @@ class OfertaPDF(FPDF):
     def draw_product_block(self, x, y, img_path, code, desc, price):
         if os.path.exists(img_path):
             self.image(img_path, x + 2, y + 2, w=38, h=38)
+        else:
+            self.set_fill_color(255, 200, 200)
+            self.rect(x + 2, y + 2, 38, 38, 'F')
+            self.set_font("Arial", '', 6)
+            self.set_xy(x + 2, y + 20)
+            self.multi_cell(38, 3, "Imagen no encontrada", align='C')
+
         self.draw_price_tag(x + 14, y + 2, price)
         self.set_font("Arial", 'B', 10)
         self.set_xy(x, y + 42)
@@ -147,11 +154,19 @@ st.title("🛠️ MI CATÁLOGO")
 st.markdown("<div style='text-align:right; font-size:12px; color:gray;'>📄 Creado por Carlos Ricaurte</div>", unsafe_allow_html=True)
 
 if IS_LOCAL:
-    with open(excel_path, 'rb') as f:
+    with open("ejemplo_catalogo.xlsx", 'rb') as f:
         st.download_button("📥 Descargar Excel de ejemplo", f.read(), file_name='ejemplo_catalogo.xlsx')
 
 uploaded_excel = st.file_uploader(label="📤 Sube tu archivo Excel (Código, Descripción, Precio)", type=['xlsx'], label_visibility='visible')
 logo_file = st.file_uploader(label="🖼️ Sube el logo de la empresa (opcional)", type=['png', 'jpg'], label_visibility='visible')
+imagenes_cargadas = st.file_uploader("📸 Sube imágenes de productos (JPG)", type=["jpg"], accept_multiple_files=True)
+
+if imagenes_cargadas:
+    for imagen in imagenes_cargadas:
+        save_path = os.path.join("mi_catalogo", "imagenes", imagen.name)
+        with open(save_path, "wb") as f:
+            f.write(imagen.getbuffer())
+    st.success("✅ Imágenes guardadas correctamente.")
 
 if logo_file:
     for ext in ['png', 'jpg', 'jpeg']:
@@ -173,4 +188,3 @@ if uploaded_excel:
         with open(pdf_file, "rb") as f:
             st.download_button("📄 Descargar PDF generado", f.read(), file_name=pdf_file, mime='application/pdf')
         st.markdown("<br><hr style='border-top:1px solid #bbb'><center><small>📄 Creado por Carlos Ricaurte</small></center>", unsafe_allow_html=True)
-

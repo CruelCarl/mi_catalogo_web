@@ -1,4 +1,3 @@
-.*
 
 # --- Personalización de portada (completo sin perder avances anteriores) ---
 st.sidebar.header("🎨 Personaliza tu portada")

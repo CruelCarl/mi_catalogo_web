@@ -70,7 +70,7 @@ elif pagina == "Diseñar portada":
 
     # --- Vista previa en Streamlit ---
     st.subheader("👁️ Vista previa de la portada")
-    st.image(portada_temp_path, use_column_width=True)
+    st.image(portada_temp_path, use_container_width=True)
 
     
 

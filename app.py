@@ -190,4 +190,4 @@ if pagina == "Generar catálogo":
         except Exception as e:
             st.error("❌ Error al leer el archivo Excel. Asegúrate de que el archivo sea un .xlsx válido y no esté dañado.")
 
-def generar_pdf_estilo_original(datos, salida=
+def generar_pdf_estilo_original(datos, salida="catalogo_estilo_original.pdf"):

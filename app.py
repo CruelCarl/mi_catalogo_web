@@ -150,40 +150,59 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.title("🛠️ MI CATÁLOGO")
+st.title("💪 MI CATÁLOGO")
 st.markdown("<div style='text-align:right; font-size:12px; color:gray;'>📄 Creado por Carlos Ricaurte</div>", unsafe_allow_html=True)
 
 if IS_LOCAL:
     with open("ejemplo_catalogo.xlsx", 'rb') as f:
-        st.download_button("📥 Descargar Excel de ejemplo", f.read(), file_name='ejemplo_catalogo.xlsx')
+        st.download_button("📅 Descargar Excel de ejemplo", f.read(), file_name='ejemplo_catalogo.xlsx')
 
-uploaded_excel = st.file_uploader(label="📤 Sube tu archivo Excel (Código, Descripción, Precio)", type=['xlsx'], label_visibility='visible')
+uploaded_excel = st.file_uploader(label="📄 Sube tu archivo Excel (Código, Descripción, Precio)", type=['xlsx'], label_visibility='visible')
 logo_file = st.file_uploader(label="🖼️ Sube el logo de la empresa (opcional)", type=['png', 'jpg'], label_visibility='visible')
-imagenes_cargadas = st.file_uploader("📸 Sube imágenes de productos (JPG)", type=["jpg"], accept_multiple_files=True)
-
-if imagenes_cargadas:
-    for imagen in imagenes_cargadas:
-        save_path = os.path.join("mi_catalogo", "imagenes", imagen.name)
-        with open(save_path, "wb") as f:
-            f.write(imagen.getbuffer())
-    st.success("✅ Imágenes guardadas correctamente.")
-
-if logo_file:
-    for ext in ['png', 'jpg', 'jpeg']:
-        try:
-            os.remove(f"logo_empresa.{ext}")
-        except FileNotFoundError:
-            pass
-    logo_ext = logo_file.name.split('.')[-1].lower()
-    image = Image.open(logo_file)
-    save_path = f"logo_empresa.{logo_ext}"
-    image.save(save_path)
+imagenes_cargadas = st.file_uploader("📸 Sube imágenes de productos (JPG, PNG, JPEG)", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
 
 if uploaded_excel:
     try:
         df = pd.read_excel(uploaded_excel, engine='openpyxl')
         df.columns = [col.strip().capitalize().replace("ó", "o") for col in df.columns]
         st.dataframe(df)
+
+        if imagenes_cargadas:
+            codigos_validos = set(df['Codigo'].astype(str))
+            imagenes_validas = []
+            nombres_invalidos = []
+
+            for imagen in imagenes_cargadas:
+                nombre_base = os.path.splitext(imagen.name)[0]
+                if nombre_base in codigos_validos:
+                    save_path = os.path.join("mi_catalogo", "imagenes", f"{nombre_base}.jpg")
+                    with open(save_path, "wb") as f:
+                        f.write(imagen.getbuffer())
+                    imagenes_validas.append(nombre_base)
+                else:
+                    nombres_invalidos.append(imagen.name)
+
+            faltantes = codigos_validos - set(imagenes_validas)
+
+            st.success(f"✅ {len(imagenes_validas)} imágenes guardadas correctamente.")
+            if nombres_invalidos:
+                st.warning("⚠️ Las siguientes imágenes no coinciden con ningún código del Excel:")
+                st.write(nombres_invalidos)
+            if faltantes:
+                st.info("ℹ️ Los siguientes productos aún no tienen imagen:")
+                st.write(sorted(faltantes))
+
+        if logo_file:
+            for ext in ['png', 'jpg', 'jpeg']:
+                try:
+                    os.remove(f"logo_empresa.{ext}")
+                except FileNotFoundError:
+                    pass
+            logo_ext = logo_file.name.split('.')[-1].lower()
+            image = Image.open(logo_file)
+            save_path = f"logo_empresa.{logo_ext}"
+            image.save(save_path)
+
         if st.button("🖨️ Generar PDF estilo catálogo original"):
             pdf_file = generar_pdf_estilo_original(df)
             with open(pdf_file, "rb") as f:

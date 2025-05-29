@@ -11,7 +11,6 @@ portada_fondo_file = None
 if subir_fondo:
     portada_fondo_file = st.sidebar.file_uploader("Sube la imagen de fondo (JPG o PNG, tamaño ideal: 3508x2480 px)", type=["jpg", "png"])
 
-import matplotlib.font_manager as fm
 
 
 st.sidebar.header("🎨 Personaliza tu portada")

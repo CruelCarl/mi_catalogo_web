@@ -63,17 +63,14 @@ class OfertaPDF(FPDF):
         self.add_page()
 
     def draw_portada(self):
-        # Usar imagen de fondo si existe
         for ext in ['jpg', 'png', 'jpeg']:
             if os.path.exists(f"portada.{ext}"):
                 self.image(f"portada.{ext}", x=0, y=0, w=297, h=210)
                 break
-        # Texto Quincenazo
         self.set_font("Arial", 'B', 50)
         self.set_text_color(255, 0, 0)
         self.set_xy(0, 80)
         self.cell(297, 20, "Quincenazo", align='C')
-        # Texto inferior
         self.set_font("Arial", '', 14)
         self.set_text_color(255, 255, 255)
         self.set_xy(10, 195)
@@ -159,4 +156,53 @@ def generar_pdf_estilo_original(datos, salida="catalogo_estilo_original.pdf"):
     pdf.draw_logo()
     pdf.output(salida)
     return salida
+
+# --- Interfaz Streamlit ---
+st.title("🛠️ MI CATÁLOGO")
+
+uploaded_excel = st.file_uploader("📤 Sube tu archivo Excel (Código, Descripción, Precio)", type=["xlsx"])
+logo_file = st.file_uploader("🖼️ Sube el logo de la empresa", type=["png", "jpg", "jpeg"])
+portada_file = st.file_uploader("🌄 Sube una imagen de portada", type=["png", "jpg", "jpeg"])
+imagenes_cargadas = st.file_uploader("📸 Sube imágenes de productos", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
+
+if st.button("🧹 Limpiar imágenes y logotipo"):
+    shutil.rmtree("mi_catalogo/imagenes", ignore_errors=True)
+    os.makedirs("mi_catalogo/imagenes", exist_ok=True)
+    for ext in ["png", "jpg", "jpeg"]:
+        for archivo in [f"logo_empresa.{ext}", f"portada.{ext}"]:
+            try:
+                os.remove(archivo)
+            except FileNotFoundError:
+                pass
+    st.success("Archivos eliminados correctamente")
+
+if imagenes_cargadas:
+    for imagen in imagenes_cargadas:
+        nombre = os.path.splitext(imagen.name)[0]
+        save_path = os.path.join("mi_catalogo/imagenes", f"{nombre}.jpg")
+        with open(save_path, "wb") as f:
+            f.write(imagen.getbuffer())
+
+if logo_file:
+    ext = logo_file.name.split(".")[-1].lower()
+    with open(f"logo_empresa.{ext}", "wb") as f:
+        f.write(logo_file.getbuffer())
+
+if portada_file:
+    ext = portada_file.name.split(".")[-1].lower()
+    with open(f"portada.{ext}", "wb") as f:
+        f.write(portada_file.getbuffer())
+
+if uploaded_excel:
+    try:
+        df = pd.read_excel(uploaded_excel, engine="openpyxl")
+        df.columns = [col.strip().capitalize().replace("ó", "o") for col in df.columns]
+        st.dataframe(df)
+        if st.button("🖨️ Generar PDF"):
+            pdf_file = generar_pdf_estilo_original(df)
+            with open(pdf_file, "rb") as f:
+                st.download_button("📄 Descargar catálogo PDF", f.read(), file_name=pdf_file, mime="application/pdf")
+    except Exception as e:
+        st.error(f"Error al leer el archivo: {e}")
+
 

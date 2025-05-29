@@ -180,11 +180,14 @@ if logo_file:
     image.save(save_path)
 
 if uploaded_excel:
-    df = pd.read_excel(uploaded_excel, engine='openpyxl')
-    df.columns = [col.strip().capitalize().replace("ó", "o") for col in df.columns]
-    st.dataframe(df)
-    if st.button("🖨️ Generar PDF estilo catálogo original"):
-        pdf_file = generar_pdf_estilo_original(df)
-        with open(pdf_file, "rb") as f:
-            st.download_button("📄 Descargar PDF generado", f.read(), file_name=pdf_file, mime='application/pdf')
-        st.markdown("<br><hr style='border-top:1px solid #bbb'><center><small>📄 Creado por Carlos Ricaurte</small></center>", unsafe_allow_html=True)
+    try:
+        df = pd.read_excel(uploaded_excel, engine='openpyxl')
+        df.columns = [col.strip().capitalize().replace("ó", "o") for col in df.columns]
+        st.dataframe(df)
+        if st.button("🖨️ Generar PDF estilo catálogo original"):
+            pdf_file = generar_pdf_estilo_original(df)
+            with open(pdf_file, "rb") as f:
+                st.download_button("📄 Descargar PDF generado", f.read(), file_name=pdf_file, mime='application/pdf')
+            st.markdown("<br><hr style='border-top:1px solid #bbb'><center><small>📄 Creado por Carlos Ricaurte</small></center>", unsafe_allow_html=True)
+    except Exception as e:
+        st.error("❌ Error al leer el archivo Excel. Asegúrate de que el archivo sea un .xlsx válido y no esté dañado.")

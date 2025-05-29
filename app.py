@@ -23,6 +23,12 @@ if pagina == "Inicio":
     """)
 
 elif pagina == "Diseñar portada":
+    import streamlit as st
+    from streamlit.runtime.scriptrunner import get_script_run_ctx
+    from streamlit.runtime.state import session_state
+    import time
+    st.experimental_rerun = lambda: None
+    last_inputs = st.session_state.get("_portada_input_hash", None)
     # --- Personalización de portada (completo sin perder avances anteriores) ---
     st.sidebar.markdown("---")
     subir_fondo = st.sidebar.checkbox("¿Deseas usar una imagen de fondo?")
@@ -35,8 +41,8 @@ elif pagina == "Diseñar portada":
     portada_color_fondo = st.sidebar.color_picker("Color de fondo", "#FFDD00")
     portada_color_texto = st.sidebar.color_picker("Color del texto", "#FF0000")
     portada_texto_secundario = st.sidebar.text_input("Texto inferior", "www.comercial-jaramillo.com - Asesoría, Respaldo y Garantía")
-    portada_tamano_titulo = st.sidebar.selectbox("Tamaño del título", [50, 60, 72, 90, 100, 120, 150, 180, 200], index=8)
-    portada_tamano_pie = st.sidebar.selectbox("Tamaño del texto inferior", [30, 36, 48, 60, 72, 90, 100], index=3)
+    portada_tamano_titulo = st.sidebar.slider("Tamaño del título", 10, 300, 200)
+    portada_tamano_pie = st.sidebar.slider("Tamaño del texto inferior", 10, 150, 60)
     portada_familia_fuente = st.sidebar.selectbox("Tipo de letra", ["arial.ttf", "DejaVuSans.ttf", "LiberationSans-Regular.ttf", "Comic_Sans_MS.ttf", "times.ttf", "Verdana.ttf"])
     portada_posicion_titulo = st.sidebar.selectbox("Ubicación del título", ["Superior", "Centro", "Inferior"])
 
@@ -64,13 +70,14 @@ elif pagina == "Diseñar portada":
     for i in range(num_formas):
         with st.sidebar.expander(f"Forma #{i+1}"):
             forma = st.selectbox(f"Tipo de forma #{i+1}", ["Rectángulo", "Círculo"], key=f"forma_tipo_{i}")
+            solo_borde = st.checkbox(f"Solo borde #{i+1}", key=f"borde_forma_{i}")
             color = st.color_picker(f"Color #{i+1}", "#000000", key=f"color_forma_{i}")
             opacidad = st.slider(f"Opacidad #{i+1}", 0, 255, 80, key=f"opacidad_forma_{i}")
             x = st.number_input(f"Posición X #{i+1}", 0, 3508, 100 + i * 50, key=f"x_forma_{i}")
             y = st.number_input(f"Posición Y #{i+1}", 0, 2480, 100 + i * 50, key=f"y_forma_{i}")
             w = st.number_input(f"Ancho #{i+1}", 10, 2000, 300, key=f"w_forma_{i}")
             h = st.number_input(f"Alto #{i+1}", 10, 2000, 150, key=f"h_forma_{i}")
-            formas.append({"tipo": forma, "color": color, "opacidad": opacidad, "x": x, "y": y, "w": w, "h": h})
+            formas.append({"tipo": forma, "color": color, "opacidad": opacidad, "x": x, "y": y, "w": w, "h": h, "solo_borde": solo_borde})
 
     if formas:
         shape_overlay = Image.new("RGBA", img.size, (255, 255, 255, 0))
@@ -79,9 +86,15 @@ elif pagina == "Diseñar portada":
             fill_color = f["color"] + f"{f['opacidad']:02x}"
             x0, y0, x1, y1 = f["x"], f["y"], f["x"] + f["w"], f["y"] + f["h"]
             if f["tipo"] == "Rectángulo":
-                shape_draw.rectangle([x0, y0, x1, y1], fill=fill_color)
+                if f.get("solo_borde"):
+                    shape_draw.rectangle([x0, y0, x1, y1], outline=f["color"], width=4)
+                else:
+                    shape_draw.rectangle([x0, y0, x1, y1], fill=fill_color)
             elif f["tipo"] == "Círculo":
-                shape_draw.ellipse([x0, y0, x1, y1], fill=fill_color)
+                if f.get("solo_borde"):
+                    shape_draw.ellipse([x0, y0, x1, y1], outline=f["color"], width=4)
+                else:
+                    shape_draw.ellipse([x0, y0, x1, y1], fill=fill_color)
         img = Image.alpha_composite(img.convert("RGBA"), shape_overlay).convert("RGB")
     draw = ImageDraw.Draw(img)
     try:
@@ -117,7 +130,14 @@ elif pagina == "Diseñar portada":
                 img.paste(logo, (x_pos, y_pos), logo)
                 break
 
-    img.save(portada_temp_path)
+        import hashlib
+    input_hash = hashlib.md5((portada_titulo + portada_color_fondo + portada_color_texto + portada_texto_secundario + portada_familia_fuente + str(portada_tamano_titulo) + str(portada_tamano_pie)).encode()).hexdigest()
+    if st.session_state.get("_portada_input_hash") != input_hash:
+        st.session_state["_portada_input_hash"] = input_hash
+        img.save(portada_temp_path)
+    else:
+        if not os.path.exists(portada_temp_path):
+            img.save(portada_temp_path)
 
     # --- Vista previa en Streamlit ---
     st.subheader("👁️ Vista previa de la portada")
@@ -301,4 +321,3 @@ def generar_pdf_estilo_original(datos, salida="catalogo_estilo_original.pdf"):
     pdf.draw_logo()
     pdf.output(salida)
     return salida
-

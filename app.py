@@ -35,10 +35,17 @@ elif pagina == "Diseñar portada":
     portada_color_fondo = st.sidebar.color_picker("Color de fondo", "#FFDD00")
     portada_color_texto = st.sidebar.color_picker("Color del texto", "#FF0000")
     portada_texto_secundario = st.sidebar.text_input("Texto inferior", "www.comercial-jaramillo.com - Asesoría, Respaldo y Garantía")
-    portada_tamano_titulo = st.sidebar.slider("Tamaño del título", min_value=50, max_value=300, value=200)
-    portada_tamano_pie = st.sidebar.slider("Tamaño del texto inferior", min_value=30, max_value=100, value=60)
-    portada_familia_fuente = st.sidebar.selectbox("Tipo de letra", ["arial.ttf", "DejaVuSans.ttf", "LiberationSans-Regular.ttf"])
+    portada_tamano_titulo = st.sidebar.selectbox("Tamaño del título", [50, 60, 72, 90, 100, 120, 150, 180, 200], index=8)
+    portada_tamano_pie = st.sidebar.selectbox("Tamaño del texto inferior", [30, 36, 48, 60, 72, 90, 100], index=3)
+    portada_familia_fuente = st.sidebar.selectbox("Tipo de letra", ["arial.ttf", "DejaVuSans.ttf", "LiberationSans-Regular.ttf", "Comic_Sans_MS.ttf", "times.ttf", "Verdana.ttf"])
     portada_posicion_titulo = st.sidebar.selectbox("Ubicación del título", ["Superior", "Centro", "Inferior"])
+
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("🖼️ Logotipo en portada")
+    incluir_logo_en_portada = st.sidebar.checkbox("Incluir logotipo en portada")
+    if incluir_logo_en_portada:
+        logo_posicion = st.sidebar.selectbox("Ubicación del logotipo", ["Izquierda", "Centro", "Derecha"])
+        logo_tamano = st.sidebar.slider("Tamaño del logotipo (% del ancho)", 5, 50, 15)
 
     # --- Generar imagen de portada personalizada ---
     portada_temp_path = "portada_temp.jpg"
@@ -47,6 +54,35 @@ elif pagina == "Diseñar portada":
         img = img.resize((3508, 2480))
     else:
         img = Image.new('RGB', (3508, 2480), color=portada_color_fondo)
+
+    # Dibujar forma decorativa opcional
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("🟦 Añadir forma decorativa")
+    st.sidebar.markdown("---")
+    formas = []
+    num_formas = st.sidebar.number_input("Cantidad de formas", min_value=0, max_value=10, value=1)
+    for i in range(num_formas):
+        with st.sidebar.expander(f"Forma #{i+1}"):
+            forma = st.selectbox(f"Tipo de forma #{i+1}", ["Rectángulo", "Círculo"], key=f"forma_tipo_{i}")
+            color = st.color_picker(f"Color #{i+1}", "#000000", key=f"color_forma_{i}")
+            opacidad = st.slider(f"Opacidad #{i+1}", 0, 255, 80, key=f"opacidad_forma_{i}")
+            x = st.number_input(f"Posición X #{i+1}", 0, 3508, 100 + i * 50, key=f"x_forma_{i}")
+            y = st.number_input(f"Posición Y #{i+1}", 0, 2480, 100 + i * 50, key=f"y_forma_{i}")
+            w = st.number_input(f"Ancho #{i+1}", 10, 2000, 300, key=f"w_forma_{i}")
+            h = st.number_input(f"Alto #{i+1}", 10, 2000, 150, key=f"h_forma_{i}")
+            formas.append({"tipo": forma, "color": color, "opacidad": opacidad, "x": x, "y": y, "w": w, "h": h})
+
+    if formas:
+        shape_overlay = Image.new("RGBA", img.size, (255, 255, 255, 0))
+        shape_draw = ImageDraw.Draw(shape_overlay)
+        for f in formas:
+            fill_color = f["color"] + f"{f['opacidad']:02x}"
+            x0, y0, x1, y1 = f["x"], f["y"], f["x"] + f["w"], f["y"] + f["h"]
+            if f["tipo"] == "Rectángulo":
+                shape_draw.rectangle([x0, y0, x1, y1], fill=fill_color)
+            elif f["tipo"] == "Círculo":
+                shape_draw.ellipse([x0, y0, x1, y1], fill=fill_color)
+        img = Image.alpha_composite(img.convert("RGBA"), shape_overlay).convert("RGB")
     draw = ImageDraw.Draw(img)
     try:
         font_title = ImageFont.truetype(portada_familia_fuente, portada_tamano_titulo)
@@ -66,6 +102,21 @@ elif pagina == "Diseñar portada":
         titulo_y = 1500
     draw.text(((3508 - txt_w) / 2, titulo_y), portada_titulo, fill=portada_color_texto, font=font_title)
     draw.text(((3508 - footer_w) / 2, 2300), portada_texto_secundario, fill="white", font=font_footer)
+        # Insertar logotipo si está activado
+    if incluir_logo_en_portada:
+        for ext in ['png', 'jpg', 'jpeg']:
+            logo_path = f"logo_empresa.{ext}"
+            if os.path.exists(logo_path):
+                logo = Image.open(logo_path).convert("RGBA")
+                max_width = int((logo_tamano / 100) * img.width)
+                aspect_ratio = logo.height / logo.width
+                new_size = (max_width, int(max_width * aspect_ratio))
+                logo = logo.resize(new_size)
+                x_pos = 0 if logo_posicion == "Izquierda" else (img.width - logo.width) // 2 if logo_posicion == "Centro" else img.width - logo.width
+                y_pos = 100
+                img.paste(logo, (x_pos, y_pos), logo)
+                break
+
     img.save(portada_temp_path)
 
     # --- Vista previa en Streamlit ---
@@ -147,13 +198,40 @@ if pagina == "Generar catálogo":
     imagenes_cargadas = st.file_uploader("📸 Sube imágenes de productos (JPG)", type=["jpg"], accept_multiple_files=True)
 
     if imagenes_cargadas:
+        codigos_excel = set()
+        if uploaded_excel:
+            try:
+                df_temp = pd.read_excel(uploaded_excel, engine='openpyxl')
+                codigos_excel = set(df_temp['Codigo'].astype(str))
+            except:
+                pass
+
+        imagenes_guardadas = []
+        nombres_invalidos = []
+
         if not os.path.exists("mi_catalogo/imagenes"):
             os.makedirs("mi_catalogo/imagenes")
+
         for imagen in imagenes_cargadas:
-            save_path = os.path.join("mi_catalogo", "imagenes", imagen.name)
-            with open(save_path, "wb") as f:
-                f.write(imagen.getbuffer())
-        st.success("✅ Imágenes guardadas correctamente.")
+            nombre_base = os.path.splitext(imagen.name)[0]
+            if not codigos_excel or nombre_base in codigos_excel:
+                save_path = os.path.join("mi_catalogo", "imagenes", imagen.name)
+                with open(save_path, "wb") as f:
+                    f.write(imagen.getbuffer())
+                imagenes_guardadas.append(nombre_base)
+            else:
+                nombres_invalidos.append(imagen.name)
+
+        st.success(f"✅ {len(imagenes_guardadas)} imágenes guardadas correctamente.")
+        if nombres_invalidos:
+            st.warning("⚠️ Las siguientes imágenes no coinciden con ningún código del Excel:")
+            st.write(nombres_invalidos)
+
+        if uploaded_excel:
+            codigos_faltantes = codigos_excel - set(imagenes_guardadas)
+            if codigos_faltantes:
+                st.info("ℹ️ Los siguientes productos aún no tienen imagen:")
+                st.write(sorted(codigos_faltantes))
 
     if logo_file:
         for ext in ['png', 'jpg', 'jpeg']:
@@ -223,3 +301,4 @@ def generar_pdf_estilo_original(datos, salida="catalogo_estilo_original.pdf"):
     pdf.draw_logo()
     pdf.output(salida)
     return salida
+

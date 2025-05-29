@@ -1,4 +1,5 @@
 import os
+import shutil
 import pandas as pd
 import streamlit as st
 from PIL import Image, ImageDraw, ImageFont
@@ -147,6 +148,12 @@ st.markdown("""
         background: linear-gradient(135deg, #e0f7ff 25%, #ffffff 25%, #ffffff 50%, #e0f7ff 50%, #e0f7ff 75%, #ffffff 75%, #ffffff 100%);
         background-size: 40px 40px;
     }
+    .limpiar-container {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 20px;
+        margin-right: 10px;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -160,6 +167,18 @@ if IS_LOCAL:
 uploaded_excel = st.file_uploader(label="📄 Sube tu archivo Excel (Código, Descripción, Precio)", type=['xlsx'], label_visibility='visible')
 logo_file = st.file_uploader(label="🖼️ Sube el logo de la empresa (opcional)", type=['png', 'jpg'], label_visibility='visible')
 imagenes_cargadas = st.file_uploader("📸 Sube imágenes de productos (JPG, PNG, JPEG)", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
+
+# --- Botón para limpiar imágenes y logotipo ---
+with st.container():
+    if st.button("🧹 Limpiar imágenes y logotipo anteriores"):
+        shutil.rmtree("mi_catalogo/imagenes", ignore_errors=True)
+        os.makedirs("mi_catalogo/imagenes", exist_ok=True)
+        for ext in ['png', 'jpg', 'jpeg']:
+            try:
+                os.remove(f"logo_empresa.{ext}")
+            except FileNotFoundError:
+                pass
+        st.success("🧼 Archivos eliminados correctamente.")
 
 if uploaded_excel:
     try:

@@ -5,7 +5,7 @@ import streamlit as st
 from PIL import Image, ImageDraw, ImageFont
 
 # --- Menú de navegación ---
-pagina = st.sidebar.radio("Selecciona una sección:", ["Inicio", "Diseñar portada"])
+pagina = st.sidebar.radio("Selecciona una sección:", ["Inicio", "Diseñar portada", "Generar catálogo"])
 
 if pagina == "Inicio":
     st.title("🛠️ MI CATÁLOGO")
@@ -69,8 +69,8 @@ elif pagina == "Diseñar portada":
     img.save(portada_temp_path)
 
     # --- Vista previa en Streamlit ---
-    st.subheader("👁️ Vista previa de la portada")
-    st.image(portada_temp_path, use_column_width=True)
+st.subheader("👁️ Vista previa de la portada")
+st.image(portada_temp_path, use_column_width=True)
 
 # --- Clase PDF y generación del catálogo ---
 from fpdf import FPDF
@@ -136,34 +136,57 @@ class OfertaPDF(FPDF):
                 self.image(path, x=245, y=193, w=30, type=ext)
                 break
 
-def generar_pdf_estilo_original(datos, salida="catalogo_estilo_original.pdf"):
-    pdf = OfertaPDF()
-    pdf.draw_portada()
-    pdf.draw_title()
-    start_x = 25
-    start_y = 20
-    cols = 4
-    spacing_x = 65
-    spacing_y = 70
+elif pagina == "Generar catálogo":
+    st.header("📄 Generación de catálogo")
 
-    for i, row in datos.iterrows():
-        col = i % cols
-        row_pos = (i // cols) % 3
-        if i > 0 and i % 12 == 0:
-            pdf.add_page()
-            pdf.draw_title()
-            pdf.draw_logo()
-        x = start_x + col * spacing_x
-        y = start_y + row_pos * spacing_y
-        if row_pos == 0:
-            y += 5
-        elif row_pos == 1:
-            y -= 10
-        elif row_pos == 2:
-            y -= 20
-        img_path = f"mi_catalogo/imagenes/{row['Codigo']}.jpg"
-        pdf.draw_product_block(x, y, img_path, row['Codigo'], row['Descripcion'], row['Precio'])
+    uploaded_excel = st.file_uploader("📤 Sube tu archivo Excel (Código, Descripción, Precio)", type=['xlsx'])
+    logo_file = st.file_uploader("🖼️ Sube el logo de la empresa (opcional)", type=['png', 'jpg'])
+    imagenes_cargadas = st.file_uploader("📸 Sube imágenes de productos (JPG)", type=["jpg"], accept_multiple_files=True)
 
-    pdf.draw_logo()
-    pdf.output(salida)
-    return salida
+    if imagenes_cargadas:
+        if not os.path.exists("mi_catalogo/imagenes"):
+            os.makedirs("mi_catalogo/imagenes")
+        for imagen in imagenes_cargadas:
+            save_path = os.path.join("mi_catalogo", "imagenes", imagen.name)
+            with open(save_path, "wb") as f:
+                f.write(imagen.getbuffer())
+        st.success("✅ Imágenes guardadas correctamente.")
+
+    if logo_file:
+        for ext in ['png', 'jpg', 'jpeg']:
+            try:
+                os.remove(f"logo_empresa.{ext}")
+            except FileNotFoundError:
+                pass
+        logo_ext = logo_file.name.split('.')[-1].lower()
+        image = Image.open(logo_file)
+        save_path = f"logo_empresa.{logo_ext}"
+        image.save(save_path)
+
+    st.markdown("---")
+    if st.button("🧹 Limpiar imágenes y logotipo"):
+        try:
+            shutil.rmtree("mi_catalogo/imagenes")
+            os.makedirs("mi_catalogo/imagenes")
+            for ext in ['png', 'jpg', 'jpeg']:
+                try:
+                    os.remove(f"logo_empresa.{ext}")
+                except FileNotFoundError:
+                    pass
+            st.success("🧼 Imágenes y logotipo eliminados correctamente.")
+        except Exception as e:
+            st.warning("⚠️ No se pudo limpiar completamente. Puede que algunas carpetas no existan todavía.")
+
+    if uploaded_excel:
+        try:
+            df = pd.read_excel(uploaded_excel, engine='openpyxl')
+            df.columns = [col.strip().capitalize().replace("ó", "o") for col in df.columns]
+            st.dataframe(df)
+            if st.button("🖨️ Generar PDF estilo catálogo original"):
+                pdf_file = generar_pdf_estilo_original(df)
+                with open(pdf_file, "rb") as f:
+                    st.download_button("📄 Descargar PDF generado", f.read(), file_name=pdf_file, mime='application/pdf')
+        except Exception as e:
+            st.error("❌ Error al leer el archivo Excel. Asegúrate de que el archivo sea un .xlsx válido y no esté dañado.")
+
+def generar_pdf_estilo_original(datos, salida=

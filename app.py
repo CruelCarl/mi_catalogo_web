@@ -180,7 +180,7 @@ if logo_file:
     image.save(save_path)
 
 if uploaded_excel:
-    df = pd.read_excel(uploaded_excel)
+    df = pd.read_excel(uploaded_excel, engine='openpyxl')
     df.columns = [col.strip().capitalize().replace("ó", "o") for col in df.columns]
     st.dataframe(df)
     if st.button("🖨️ Generar PDF estilo catálogo original"):

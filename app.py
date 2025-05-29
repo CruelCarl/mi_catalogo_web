@@ -124,7 +124,73 @@ elif pagina == "Diseñar portada":
     st.subheader("👁️ Vista previa de la portada")
     st.image(portada_temp_path, use_container_width=True)
 
-# --- Aquí seguiría la sección de "Generar catálogo" ---
-# Se puede restaurar completamente en el siguiente paso si lo deseas
+elif pagina == "Generar catálogo":
+    st.header("📄 Generación de catálogo")
+
+    uploaded_excel = st.file_uploader("📤 Sube tu archivo Excel (Código, Descripción, Precio)", type=['xlsx'])
+    logo_file = st.file_uploader("🖼️ Sube el logo de la empresa (opcional)", type=['png', 'jpg'])
+    imagenes_cargadas = st.file_uploader("📸 Sube imágenes de productos (JPG)", type=["jpg"], accept_multiple_files=True)
+
+    if imagenes_cargadas:
+        codigos_excel = set()
+        if uploaded_excel:
+            try:
+                df_temp = pd.read_excel(uploaded_excel, engine='openpyxl')
+                codigos_excel = set(df_temp['Codigo'].astype(str))
+            except:
+                pass
+
+        imagenes_guardadas = []
+        nombres_invalidos = []
+
+        if not os.path.exists("mi_catalogo/imagenes"):
+            os.makedirs("mi_catalogo/imagenes")
+
+        for imagen in imagenes_cargadas:
+            nombre_base = os.path.splitext(imagen.name)[0]
+            if not codigos_excel or nombre_base in codigos_excel:
+                save_path = os.path.join("mi_catalogo", "imagenes", imagen.name)
+                with open(save_path, "wb") as f:
+                    f.write(imagen.getbuffer())
+                imagenes_guardadas.append(nombre_base)
+            else:
+                nombres_invalidos.append(imagen.name)
+
+        st.success(f"✅ {len(imagenes_guardadas)} imágenes guardadas correctamente.")
+        if nombres_invalidos:
+            st.warning("⚠️ Las siguientes imágenes no coinciden con ningún código del Excel:")
+            st.write(nombres_invalidos)
+
+        if uploaded_excel:
+            codigos_faltantes = codigos_excel - set(imagenes_guardadas)
+            if codigos_faltantes:
+                st.info("ℹ️ Los siguientes productos aún no tienen imagen:")
+                st.write(sorted(codigos_faltantes))
+
+    if logo_file:
+        for ext in ['png', 'jpg', 'jpeg']:
+            try:
+                os.remove(f"logo_empresa.{ext}")
+            except FileNotFoundError:
+                pass
+        logo_ext = logo_file.name.split('.')[-1].lower()
+        image = Image.open(logo_file)
+        save_path = f"logo_empresa.{logo_ext}"
+        image.save(save_path)
+
+    st.markdown("---")
+    if st.button("🧹 Limpiar imágenes y logotipo"):
+        try:
+            shutil.rmtree("mi_catalogo/imagenes")
+            os.makedirs("mi_catalogo/imagenes")
+            for ext in ['png', 'jpg', 'jpeg']:
+                try:
+                    os.remove(f"logo_empresa.{ext}")
+                except FileNotFoundError:
+                    pass
+            st.success("🧼 Imágenes y logotipo eliminados correctamente.")
+        except Exception as e:
+            st.warning("⚠️ No se pudo limpiar completamente. Puede que algunas carpetas no existan todavía.")
+
 
 

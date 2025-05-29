@@ -57,17 +57,27 @@ elif pagina == "Diseñar portada":
     # --- Generar imagen de portada personalizada ---
     import hashlib
     formas = st.session_state.get("formas", [])
-    def calcular_hash_portada():
-        base = f"{portada_titulo}|{portada_color_fondo}|{portada_color_texto}|{portada_texto_secundario}|{portada_familia_fuente}|{portada_tamano_titulo}|{portada_tamano_pie}|{portada_posicion_titulo}|{incluir_logo_en_portada}"
-        if incluir_logo_en_portada:
-            base += f"|{logo_posicion}|{logo_tamano}"
-        if subir_fondo:
-            base += "|fondo"
-        for f in formas:
-            base += f"|{f['tipo']},{f['color']},{f['opacidad']},{f['x']},{f['y']},{f['w']},{f['h']},{f['solo_borde']}"
-        return hashlib.md5(base.encode()).hexdigest()
+    def calcular_hash_portada(titulo, fondo_color, texto_color, texto_secundario, fuente, tam_titulo, tam_pie, pos_titulo, incluir_logo, logo_pos=None, logo_tam=None, usar_fondo=False, formas=[]):
+    base = f"{titulo}|{fondo_color}|{texto_color}|{texto_secundario}|{fuente}|{tam_titulo}|{tam_pie}|{pos_titulo}|{incluir_logo}"
+    if incluir_logo and logo_pos and logo_tam:
+        base += f"|{logo_pos}|{logo_tam}"
+    if usar_fondo:
+        base += "|fondo"
+    for f in formas:
+        base += f"|{f['tipo']},{f['color']},{f['opacidad']},{f['x']},{f['y']},{f['w']},{f['h']},{f['solo_borde']}"
+    return hashlib.md5(base.encode()).hexdigest()
 
-    current_hash = calcular_hash_portada() + ('-manual' if actualizar_manual else '')
+    current_hash = calcular_hash_portada(
+    portada_titulo, portada_color_fondo, portada_color_texto,
+    portada_texto_secundario, portada_familia_fuente,
+    portada_tamano_titulo, portada_tamano_pie,
+    portada_posicion_titulo,
+    incluir_logo_en_portada,
+    logo_posicion if incluir_logo_en_portada else None,
+    logo_tamano if incluir_logo_en_portada else None,
+    subir_fondo,
+    formas
+) + ('-manual' if actualizar_manual else '')
     if st.session_state.get("_portada_input_hash") != current_hash or not os.path.exists(portada_temp_path):
         st.session_state["_portada_input_hash"] = current_hash
 

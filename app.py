@@ -1,3 +1,8 @@
+import os
+import shutil
+import pandas as pd
+import streamlit as st
+from PIL import Image, ImageDraw, ImageFont
 
 # --- Personalización de portada (completo sin perder avances anteriores) ---
 st.sidebar.header("🎨 Personaliza tu portada")

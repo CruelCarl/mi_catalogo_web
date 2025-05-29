@@ -191,3 +191,33 @@ if pagina == "Generar catálogo":
             st.error("❌ Error al leer el archivo Excel. Asegúrate de que el archivo sea un .xlsx válido y no esté dañado.")
 
 def generar_pdf_estilo_original(datos, salida="catalogo_estilo_original.pdf"):
+    pdf = OfertaPDF()
+    pdf.draw_portada()
+    pdf.draw_title()
+    start_x = 25
+    start_y = 20
+    cols = 4
+    spacing_x = 65
+    spacing_y = 70
+
+    for i, row in datos.iterrows():
+        col = i % cols
+        row_pos = (i // cols) % 3
+        if i > 0 and i % 12 == 0:
+            pdf.add_page()
+            pdf.draw_title()
+            pdf.draw_logo()
+        x = start_x + col * spacing_x
+        y = start_y + row_pos * spacing_y
+        if row_pos == 0:
+            y += 5
+        elif row_pos == 1:
+            y -= 10
+        elif row_pos == 2:
+            y -= 20
+        img_path = f"mi_catalogo/imagenes/{row['Codigo']}.jpg"
+        pdf.draw_product_block(x, y, img_path, row['Codigo'], row['Descripcion'], row['Precio'])
+
+    pdf.draw_logo()
+    pdf.output(salida)
+    return salida

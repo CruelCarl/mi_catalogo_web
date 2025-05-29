@@ -62,6 +62,23 @@ class OfertaPDF(FPDF):
         self.set_auto_page_break(auto=False)
         self.add_page()
 
+    def draw_portada(self):
+        # Usar imagen de fondo si existe
+        for ext in ['jpg', 'png', 'jpeg']:
+            if os.path.exists(f"portada.{ext}"):
+                self.image(f"portada.{ext}", x=0, y=0, w=297, h=210)
+                break
+        # Texto Quincenazo
+        self.set_font("Arial", 'B', 50)
+        self.set_text_color(255, 0, 0)
+        self.set_xy(0, 80)
+        self.cell(297, 20, "Quincenazo", align='C')
+        # Texto inferior
+        self.set_font("Arial", '', 14)
+        self.set_text_color(255, 255, 255)
+        self.set_xy(10, 195)
+        self.cell(0, 10, "www.comercial-jaramillo.com   -   Asesoría, Respaldo y Garantía", align='C')
+
     def draw_title(self):
         self.set_font("Arial", 'B', 28)
         self.set_fill_color(230, 230, 230)
@@ -112,6 +129,8 @@ class OfertaPDF(FPDF):
 
 def generar_pdf_estilo_original(datos, salida="catalogo_estilo_original.pdf"):
     pdf = OfertaPDF()
+    pdf.draw_portada()
+    pdf.add_page()
     pdf.draw_title()
     start_x = 25
     start_y = 20
@@ -141,91 +160,3 @@ def generar_pdf_estilo_original(datos, salida="catalogo_estilo_original.pdf"):
     pdf.output(salida)
     return salida
 
-# --- Interfaz Streamlit ---
-st.markdown("""
-    <style>
-    .stApp {
-        background: linear-gradient(135deg, #e0f7ff 25%, #ffffff 25%, #ffffff 50%, #e0f7ff 50%, #e0f7ff 75%, #ffffff 75%, #ffffff 100%);
-        background-size: 40px 40px;
-    }
-    .limpiar-container {
-        display: flex;
-        justify-content: flex-end;
-        margin-top: 20px;
-        margin-right: 10px;
-    }
-    </style>
-""", unsafe_allow_html=True)
-
-st.title("💪 MI CATÁLOGO")
-st.markdown("<div style='text-align:right; font-size:12px; color:gray;'>📄 Creado por Carlos Ricaurte</div>", unsafe_allow_html=True)
-
-if IS_LOCAL:
-    with open("ejemplo_catalogo.xlsx", 'rb') as f:
-        st.download_button("📅 Descargar Excel de ejemplo", f.read(), file_name='ejemplo_catalogo.xlsx')
-
-uploaded_excel = st.file_uploader(label="📄 Sube tu archivo Excel (Código, Descripción, Precio)", type=['xlsx'], label_visibility='visible')
-logo_file = st.file_uploader(label="🖼️ Sube el logo de la empresa (opcional)", type=['png', 'jpg'], label_visibility='visible')
-imagenes_cargadas = st.file_uploader("📸 Sube imágenes de productos (JPG, PNG, JPEG)", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
-
-# --- Botón para limpiar imágenes y logotipo ---
-with st.container():
-    if st.button("🧹 Limpiar imágenes y logotipo anteriores"):
-        shutil.rmtree("mi_catalogo/imagenes", ignore_errors=True)
-        os.makedirs("mi_catalogo/imagenes", exist_ok=True)
-        for ext in ['png', 'jpg', 'jpeg']:
-            try:
-                os.remove(f"logo_empresa.{ext}")
-            except FileNotFoundError:
-                pass
-        st.success("🧼 Archivos eliminados correctamente.")
-
-if uploaded_excel:
-    try:
-        df = pd.read_excel(uploaded_excel, engine='openpyxl')
-        df.columns = [col.strip().capitalize().replace("ó", "o") for col in df.columns]
-        st.dataframe(df)
-
-        if imagenes_cargadas:
-            codigos_validos = set(df['Codigo'].astype(str))
-            imagenes_validas = []
-            nombres_invalidos = []
-
-            for imagen in imagenes_cargadas:
-                nombre_base = os.path.splitext(imagen.name)[0]
-                if nombre_base in codigos_validos:
-                    save_path = os.path.join("mi_catalogo", "imagenes", f"{nombre_base}.jpg")
-                    with open(save_path, "wb") as f:
-                        f.write(imagen.getbuffer())
-                    imagenes_validas.append(nombre_base)
-                else:
-                    nombres_invalidos.append(imagen.name)
-
-            faltantes = codigos_validos - set(imagenes_validas)
-
-            st.success(f"✅ {len(imagenes_validas)} imágenes guardadas correctamente.")
-            if nombres_invalidos:
-                st.warning("⚠️ Las siguientes imágenes no coinciden con ningún código del Excel:")
-                st.write(nombres_invalidos)
-            if faltantes:
-                st.info("ℹ️ Los siguientes productos aún no tienen imagen:")
-                st.write(sorted(faltantes))
-
-        if logo_file:
-            for ext in ['png', 'jpg', 'jpeg']:
-                try:
-                    os.remove(f"logo_empresa.{ext}")
-                except FileNotFoundError:
-                    pass
-            logo_ext = logo_file.name.split('.')[-1].lower()
-            image = Image.open(logo_file)
-            save_path = f"logo_empresa.{logo_ext}"
-            image.save(save_path)
-
-        if st.button("🖨️ Generar PDF estilo catálogo original"):
-            pdf_file = generar_pdf_estilo_original(df)
-            with open(pdf_file, "rb") as f:
-                st.download_button("📄 Descargar PDF generado", f.read(), file_name=pdf_file, mime='application/pdf')
-            st.markdown("<br><hr style='border-top:1px solid #bbb'><center><small>📄 Creado por Carlos Ricaurte</small></center>", unsafe_allow_html=True)
-    except Exception as e:
-        st.error("❌ Error al leer el archivo Excel. Asegúrate de que el archivo sea un .xlsx válido y no esté dañado.")

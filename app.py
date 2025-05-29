@@ -45,6 +45,7 @@ elif pagina == "Diseñar portada":
     portada_tamano_pie = st.sidebar.slider("Tamaño del texto inferior", 10, 150, 60)
     portada_familia_fuente = st.sidebar.selectbox("Tipo de letra", ["arial.ttf", "DejaVuSans.ttf", "LiberationSans-Regular.ttf", "Comic_Sans_MS.ttf", "times.ttf", "Verdana.ttf"])
     portada_posicion_titulo = st.sidebar.selectbox("Ubicación del título", ["Superior", "Centro", "Inferior"])
+    actualizar_manual = st.sidebar.button("🔁 Refrescar portada manualmente")
 
     st.sidebar.markdown("---")
     st.sidebar.subheader("🖼️ Logotipo en portada")
@@ -54,57 +55,79 @@ elif pagina == "Diseñar portada":
         logo_tamano = st.sidebar.slider("Tamaño del logotipo (% del ancho)", 5, 50, 15)
 
     # --- Generar imagen de portada personalizada ---
-    portada_temp_path = "portada_temp.jpg"
-    if portada_fondo_file:
-        img = Image.open(portada_fondo_file).convert("RGB")
-        img = img.resize((3508, 2480))
-    else:
-        img = Image.new('RGB', (3508, 2480), color=portada_color_fondo)
-
-    # Dibujar forma decorativa opcional
-    st.sidebar.markdown("---")
-    st.sidebar.subheader("🟦 Añadir forma decorativa")
-    st.sidebar.markdown("---")
-    formas = []
-    num_formas = st.sidebar.number_input("Cantidad de formas", min_value=0, max_value=10, value=1)
-    for i in range(num_formas):
-        with st.sidebar.expander(f"Forma #{i+1}"):
-            forma = st.selectbox(f"Tipo de forma #{i+1}", ["Rectángulo", "Círculo"], key=f"forma_tipo_{i}")
-            solo_borde = st.checkbox(f"Solo borde #{i+1}", key=f"borde_forma_{i}")
-            color = st.color_picker(f"Color #{i+1}", "#000000", key=f"color_forma_{i}")
-            opacidad = st.slider(f"Opacidad #{i+1}", 0, 255, 80, key=f"opacidad_forma_{i}")
-            x = st.number_input(f"Posición X #{i+1}", 0, 3508, 100 + i * 50, key=f"x_forma_{i}")
-            y = st.number_input(f"Posición Y #{i+1}", 0, 2480, 100 + i * 50, key=f"y_forma_{i}")
-            w = st.number_input(f"Ancho #{i+1}", 10, 2000, 300, key=f"w_forma_{i}")
-            h = st.number_input(f"Alto #{i+1}", 10, 2000, 150, key=f"h_forma_{i}")
-            formas.append({"tipo": forma, "color": color, "opacidad": opacidad, "x": x, "y": y, "w": w, "h": h, "solo_borde": solo_borde})
-
-    if formas:
-        shape_overlay = Image.new("RGBA", img.size, (255, 255, 255, 0))
-        shape_draw = ImageDraw.Draw(shape_overlay)
+    import hashlib
+    def calcular_hash_portada():
+        base = f"{portada_titulo}|{portada_color_fondo}|{portada_color_texto}|{portada_texto_secundario}|{portada_familia_fuente}|{portada_tamano_titulo}|{portada_tamano_pie}|{portada_posicion_titulo}|{incluir_logo_en_portada}"
+        if incluir_logo_en_portada:
+            base += f"|{logo_posicion}|{logo_tamano}"
+        if subir_fondo:
+            base += "|fondo"
         for f in formas:
-            fill_color = f["color"] + f"{f['opacidad']:02x}"
-            x0, y0, x1, y1 = f["x"], f["y"], f["x"] + f["w"], f["y"] + f["h"]
-            if f["tipo"] == "Rectángulo":
-                if f.get("solo_borde"):
-                    shape_draw.rectangle([x0, y0, x1, y1], outline=f["color"], width=4)
-                else:
-                    shape_draw.rectangle([x0, y0, x1, y1], fill=fill_color)
-            elif f["tipo"] == "Círculo":
-                if f.get("solo_borde"):
-                    shape_draw.ellipse([x0, y0, x1, y1], outline=f["color"], width=4)
-                else:
-                    shape_draw.ellipse([x0, y0, x1, y1], fill=fill_color)
-        img = Image.alpha_composite(img.convert("RGBA"), shape_overlay).convert("RGB")
-    draw = ImageDraw.Draw(img)
-    try:
-        font_title = ImageFont.truetype(portada_familia_fuente, portada_tamano_titulo)
-        font_footer = ImageFont.truetype(portada_familia_fuente, portada_tamano_pie)
-    except:
-        font_title = ImageFont.load_default()
-        font_footer = ImageFont.load_default()
+            base += f"|{f['tipo']},{f['color']},{f['opacidad']},{f['x']},{f['y']},{f['w']},{f['h']},{f['solo_borde']}"
+        return hashlib.md5(base.encode()).hexdigest()
 
-    # Posición dinámica del título
+    current_hash = calcular_hash_portada() + ('-manual' if actualizar_manual else '')
+    if st.session_state.get("_portada_input_hash") != current_hash or not os.path.exists(portada_temp_path):
+        st.session_state["_portada_input_hash"] = current_hash
+
+        if portada_fondo_file:
+            img = Image.open(portada_fondo_file).convert("RGB")
+            img = img.resize((3508, 2480))
+        else:
+            img = Image.new('RGB', (3508, 2480), color=portada_color_fondo)
+
+        if formas:
+            shape_overlay = Image.new("RGBA", img.size, (255, 255, 255, 0))
+            shape_draw = ImageDraw.Draw(shape_overlay)
+            for f in formas:
+                fill_color = f["color"] + f"{f['opacidad']:02x}"
+                x0, y0, x1, y1 = f["x"], f["y"], f["x"] + f["w"], f["y"] + f["h"]
+                if f["tipo"] == "Rectángulo":
+                    if f.get("solo_borde"):
+                        shape_draw.rectangle([x0, y0, x1, y1], outline=f["color"], width=4)
+                    else:
+                        shape_draw.rectangle([x0, y0, x1, y1], fill=fill_color)
+                elif f["tipo"] == "Círculo":
+                    if f.get("solo_borde"):
+                        shape_draw.ellipse([x0, y0, x1, y1], outline=f["color"], width=4)
+                    else:
+                        shape_draw.ellipse([x0, y0, x1, y1], fill=fill_color)
+            img = Image.alpha_composite(img.convert("RGBA"), shape_overlay).convert("RGB")
+
+        draw = ImageDraw.Draw(img)
+        try:
+            font_title = ImageFont.truetype(portada_familia_fuente, portada_tamano_titulo)
+            font_footer = ImageFont.truetype(portada_familia_fuente, portada_tamano_pie)
+        except:
+            font_title = ImageFont.load_default()
+            font_footer = ImageFont.load_default()
+
+        txt_w, txt_h = draw.textbbox((0, 0), portada_titulo, font=font_title)[2:]
+        footer_w, _ = draw.textbbox((0, 0), portada_texto_secundario, font=font_footer)[2:]
+        if portada_posicion_titulo == "Superior":
+            titulo_y = 400
+        elif portada_posicion_titulo == "Centro":
+            titulo_y = 900
+        else:
+            titulo_y = 1500
+        draw.text(((3508 - txt_w) / 2, titulo_y), portada_titulo, fill=portada_color_texto, font=font_title)
+        draw.text(((3508 - footer_w) / 2, 2300), portada_texto_secundario, fill="white", font=font_footer)
+
+        if incluir_logo_en_portada:
+            for ext in ['png', 'jpg', 'jpeg']:
+                logo_path = f"logo_empresa.{ext}"
+                if os.path.exists(logo_path):
+                    logo = Image.open(logo_path).convert("RGBA")
+                    max_width = int((logo_tamano / 100) * img.width)
+                    aspect_ratio = logo.height / logo.width
+                    new_size = (max_width, int(max_width * aspect_ratio))
+                    logo = logo.resize(new_size)
+                    x_pos = 0 if logo_posicion == "Izquierda" else (img.width - logo.width) // 2 if logo_posicion == "Centro" else img.width - logo.width
+                    y_pos = 100
+                    img.paste(logo, (x_pos, y_pos), logo)
+                    break
+
+        img.save(portada_temp_path)
     txt_w, txt_h = draw.textbbox((0, 0), portada_titulo, font=font_title)[2:]
     footer_w, _ = draw.textbbox((0, 0), portada_texto_secundario, font=font_footer)[2:]
     if portada_posicion_titulo == "Superior":

@@ -136,7 +136,8 @@ class OfertaPDF(FPDF):
                 self.image(path, x=245, y=193, w=30, type=ext)
                 break
 
-elif pagina == "Generar catálogo":
+
+if pagina == "Generar catálogo":
     st.header("📄 Generación de catálogo")
 
     uploaded_excel = st.file_uploader("📤 Sube tu archivo Excel (Código, Descripción, Precio)", type=['xlsx'])

@@ -1,5 +1,28 @@
 .*
 
+# --- Personalización de portada (completo sin perder avances anteriores) ---
+st.sidebar.header("🎨 Personaliza tu portada")
+portada_titulo = st.sidebar.text_input("Texto principal", "Quincenazo")
+portada_color_fondo = st.sidebar.color_picker("Color de fondo", "#FFDD00")
+portada_color_texto = st.sidebar.color_picker("Color del texto", "#FF0000")
+portada_texto_secundario = st.sidebar.text_input("Texto inferior", "www.comercial-jaramillo.com - Asesoría, Respaldo y Garantía")
+
+# --- Generar imagen de portada personalizada ---
+portada_temp_path = "portada_temp.jpg"
+img = Image.new('RGB', (3508, 2480), color=portada_color_fondo)  # A4 horizontal en px @ 300dpi aprox.
+draw = ImageDraw.Draw(img)
+try:
+    font_title = ImageFont.truetype("arial.ttf", 200)
+    font_footer = ImageFont.truetype("arial.ttf", 60)
+except:
+    font_title = ImageFont.load_default()
+    font_footer = ImageFont.load_default()
+txt_w, txt_h = draw.textbbox((0, 0), portada_titulo, font=font_title)[2:]
+footer_w, _ = draw.textbbox((0, 0), portada_texto_secundario, font=font_footer)[2:]
+draw.text(((3508 - txt_w) / 2, 900), portada_titulo, fill=portada_color_texto, font=font_title)
+draw.text(((3508 - footer_w) / 2, 2300), portada_texto_secundario, fill="white", font=font_footer)
+img.save(portada_temp_path)
+
 # --- Interfaz Streamlit ---
 st.title("🛠️ MI CATÁLOGO")
 

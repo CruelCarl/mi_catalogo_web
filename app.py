@@ -56,6 +56,7 @@ elif pagina == "Diseñar portada":
 
     # --- Generar imagen de portada personalizada ---
     import hashlib
+    formas = st.session_state.get("formas", [])
     def calcular_hash_portada():
         base = f"{portada_titulo}|{portada_color_fondo}|{portada_color_texto}|{portada_texto_secundario}|{portada_familia_fuente}|{portada_tamano_titulo}|{portada_tamano_pie}|{portada_posicion_titulo}|{incluir_logo_en_portada}"
         if incluir_logo_en_portada:
@@ -344,3 +345,4 @@ def generar_pdf_estilo_original(datos, salida="catalogo_estilo_original.pdf"):
     pdf.draw_logo()
     pdf.output(salida)
     return salida
+

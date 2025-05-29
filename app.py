@@ -69,8 +69,10 @@ elif pagina == "Diseñar portada":
     img.save(portada_temp_path)
 
     # --- Vista previa en Streamlit ---
-st.subheader("👁️ Vista previa de la portada")
-st.image(portada_temp_path, use_column_width=True)
+    st.subheader("👁️ Vista previa de la portada")
+    st.image(portada_temp_path, use_column_width=True)
+
+    
 
 # --- Clase PDF y generación del catálogo ---
 from fpdf import FPDF
